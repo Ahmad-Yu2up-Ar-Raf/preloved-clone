@@ -12,11 +12,11 @@ export default function HalamanUtama() {
   const totalCount = data?.pages[0]?.totalCount ?? 0;
 
   return (
-    <Wrapper>
+    <Wrapper edges={["bottom", 'top']} className="px-4 pt-4">
       <View>
-        {Products.map((product) => (
+        {/* {Products.map((product) => (
           <ProductCard key={product.id} Product={product} />
-        ))}
+        ))} */}
       </View>
     </Wrapper>
   );

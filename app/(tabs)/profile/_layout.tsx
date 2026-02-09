@@ -14,7 +14,7 @@ const SCREEN_OPTIONS = {
 export default function HomeLayout() {
   return (
     <Stack>
-      <Stack.Screen options={SCREEN_OPTIONS} />
+      <Stack.Screen name='index' options={SCREEN_OPTIONS} />
       {/* Tambahkan screen lain di sini jika ada nested routes */}
     </Stack>
   );
