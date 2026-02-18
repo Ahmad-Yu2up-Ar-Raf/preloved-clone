@@ -1,178 +1,224 @@
-// components/ui/core/block/beranda-block.tsx - ENHANCED WITH CUSTOM SPINNER
+// app/(tabs)/home/index.tsx - COMPLETE FIXED with Platzi API
 
-import { View, FlatList, RefreshControl, Animated } from 'react-native';
 import React from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { getProductsInfiniteQueryOptions } from '@/lib/server/products/products-queris-server';
-import { ProductCard } from '../../fragments/custom/card/product-card';
-import { Link } from 'expo-router';
-import { Text } from '../../fragments/shadcn-ui/text';
-import { Icon } from '../../fragments/shadcn-ui/icon';
-import { ChevronRight, Loader2 } from 'lucide-react-native';
-import { cn } from '@/lib/utils';
-import { buttonTextVariants, buttonVariants, Button } from '../../fragments/shadcn-ui/button';
-import type { ProductSchema } from '@/type/products';
+import { View, FlatList, RefreshControl } from 'react-native';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  productCategoryQueryOptions,
+  productInfiniteQueryOptions,
+} from '@/lib/server/products/products-queris-server';
+import { sellerQueryOptions } from '@/lib/server/sellers/sellers-queris-server';
+import ProductCarousel from '@/components/ui/fragments/custom/carousel/product-carousel';
+import SellerCarousel from '@/components/ui/fragments/custom/carousel/seller-carousel';
+import { ProductCard } from '@/components/ui/fragments/custom/card/product-card';
+import { ProductCardSkeleton } from '@/components/ui/fragments/custom/skeleton/product-card-skeleton';
+import { HeaderAction } from '@/components/ui/fragments/custom/typography/header';
+import { Text } from '@/components/ui/fragments/shadcn-ui/text';
+import { Button } from '@/components/ui/fragments/shadcn-ui/button';
+import { Spinner } from '@/components/ui/fragments/shadcn-ui/spinner';
+import type { Product } from '@/type/products-type';
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
-import { Spinner } from '../../fragments/shadcn-ui/spinner';
+import { router } from 'expo-router';
+ 
+import OnboardingCarousel from '../../fragments/custom/carousel/onboarding-carousel';
 
-// ✅ Custom Loading Spinner Component
-function LoadingSpinner({ text }: { text?: string }) {
-  const spinValue = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    const spin = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      })
-    );
-    spin.start();
-
-    return () => spin.stop();
-  }, []);
-
-  const rotate = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-      <Spinner className="text-primary" />
-
-      {text && <Text className="mt-3 text-sm text-muted-foreground">{text}</Text>}
-    </View>
-  );
-}
-
-export default function HalamanUtama() {
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-  } = useInfiniteQuery(getProductsInfiniteQueryOptions());
-
-  const products = React.useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data]);
+export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
   const currentTheme = colorScheme ?? 'light';
   const tintColor = THEME[currentTheme].primary;
-  const totalCount = data?.pages[0]?.totalCount ?? 0;
-  const isAllLoaded = products.length >= totalCount;
 
-  // ✅ Debounced load more (prevent multiple triggers)
-  const loadMoreTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ✅ Query 1: Clothes category (categoryId: 1)
+  const clothesQuery = useQuery(productCategoryQueryOptions(5, { limit:6 }));
 
-  const handleLoadMore = React.useCallback(() => {
-    // ✅ Clear previous timeout
-    if (loadMoreTimeoutRef.current) {
-      clearTimeout(loadMoreTimeoutRef.current);
-    }
+  // ✅ Query 2: Electronics category (categoryId: 2)
+  const electronicsQuery = useQuery(productCategoryQueryOptions(4, { limit: 2 }));
 
-    // ✅ Debounce 300ms
-    loadMoreTimeoutRef.current = setTimeout(() => {
-      if (hasNextPage && !isFetchingNextPage) {
-        console.log('🔄 Fetching next page...');
-        fetchNextPage();
-      }
-    }, 300);
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // ✅ Query 3: Furniture category (categoryId: 3)
+  const furnitureQuery = useQuery(productCategoryQueryOptions(3, { limit: 5 }));
 
-  // ✅ Cleanup timeout
-  React.useEffect(() => {
-    return () => {
-      if (loadMoreTimeoutRef.current) {
-        clearTimeout(loadMoreTimeoutRef.current);
-      }
-    };
-  }, []);
+  // ✅ Query 4: Sellers with top products (PLATZI!)
+  const sellersQuery = useQuery(sellerQueryOptions({ limit: 4 }));
 
-  const renderItem = React.useCallback(
-    ({ item, index }: { item: ProductSchema; index: number }) => {
-      return (
-        <View className="mb-3 w-1/2">
-          <ProductCard Product={item} />
-        </View>
-      );
-    },
-    []
+  // ✅ Query 5: Infinite scroll - FIXED!
+  const infiniteQuery = useInfiniteQuery(
+    productInfiniteQueryOptions({
+      limit: 10,
+    })
   );
 
-  // ✅ Enhanced footer with end state
-  const renderFooter = React.useCallback(() => {
-    if (isFetchingNextPage) {
-      return <LoadingSpinner text="Loading more products..." />;
+  // ✅ Flatten pages - memoized
+  const infiniteProducts = React.useMemo(
+    () => infiniteQuery.data?.pages.flatMap((page) => page.products) ?? [],
+    [infiniteQuery.data?.pages]
+  );
+
+  // ✅ FIXED: NO DEBOUNCE, instant guard
+  const handleLoadMore = React.useCallback(() => {
+    if (!infiniteQuery.hasNextPage || infiniteQuery.isFetchingNextPage) {
+      return; // Early exit
+    }
+    infiniteQuery.fetchNextPage(); // Direct call
+  }, [infiniteQuery]);
+
+  // Refetch all
+  const handleRefresh = React.useCallback(() => {
+    clothesQuery.refetch();
+    electronicsQuery.refetch();
+    furnitureQuery.refetch();
+    sellersQuery.refetch();
+    infiniteQuery.refetch();
+  }, [clothesQuery, electronicsQuery, furnitureQuery, sellersQuery, infiniteQuery]);
+
+  const isRefreshing =
+    (clothesQuery.isFetching && !clothesQuery.isLoading) ||
+    (electronicsQuery.isFetching && !electronicsQuery.isLoading) ||
+    (furnitureQuery.isFetching && !furnitureQuery.isLoading) ||
+    (sellersQuery.isFetching && !sellersQuery.isLoading) ||
+    (infiniteQuery.isFetching && !infiniteQuery.isFetchingNextPage);
+
+  // ✅ ListHeader: 3 Product Carousels + 1 Seller Carousel
+  const ListHeader = React.useCallback(() => {
+    return (
+      <View className="gap-8">
+        {/* Carousel 1: Clothes */}
+        <OnboardingCarousel
+          deskription="Pelajari cara pakai Preloved!"
+          title="Welcome Kak"
+          isLoading={clothesQuery.isLoading}
+        />
+        <ProductCarousel
+          title="For You"
+          products={clothesQuery.data?.products ?? []}
+          isLoading={clothesQuery.isLoading}
+          onProductPress={(product) => {
+            console.log('Product:', product.id);
+          }}
+          onSeeAllPress={() => {
+            router.push('/(tabs)/explore?category=1');
+          }}
+        />
+
+        {/* Carousel 2: Electronics */}
+        <ProductCarousel
+          title="Your Likes"
+          products={electronicsQuery.data?.products ?? []}
+          isLoading={electronicsQuery.isLoading}
+          onProductPress={(product) => {
+            console.log('Product:', product.id);
+          }}
+          onSeeAllPress={() => {
+            router.push('/(tabs)/explore?category=2');
+          }}
+        />
+
+        {/* Carousel 3: Furniture */}
+        <ProductCarousel
+          title="Baru Dilihat"
+          products={furnitureQuery.data?.products ?? []}
+          isLoading={furnitureQuery.isLoading}
+          onProductPress={(product) => {
+            console.log('Product:', product.id);
+          }}
+          onSeeAllPress={() => {
+            router.push('/(tabs)/explore?category=3');
+          }}
+        />
+
+        {/* ✅ Carousel 4: Sellers with top products */}
+        <SellerCarousel
+          title="Rekomendasi seller"
+          sellers={sellersQuery.data?.sellers ?? []}
+          isLoading={sellersQuery.isLoading}
+          onSellerPress={(seller) => {
+            console.log('Seller:', seller.id);
+          }}
+          onSeeAllPress={() => {
+            router.push('/(tabs)/explore?tab=sellers');
+          }}
+        />
+
+        {/* Section 5 Header */}
+        <View className="px-5">
+          <HeaderAction title="Hot Items" onPress={() => router.push('/(tabs)/explore')} />
+        </View>
+      </View>
+    );
+  }, [clothesQuery, electronicsQuery, furnitureQuery, sellersQuery]);
+
+  // ✅ ListFooter
+  const ListFooter = React.useCallback(() => {
+    if (infiniteQuery.isFetchingNextPage) {
+      return (
+        <View className="items-center py-2" style={{ height: 40 }}>
+          <Spinner className="text-primary" />
+          <Text className="sr-only mt-3 text-sm text-muted-foreground">Loading more...</Text>
+        </View>
+      );
     }
 
-    return null;
-  }, [isFetchingNextPage, isAllLoaded, products.length, totalCount]);
+    if (!infiniteQuery.hasNextPage && infiniteProducts.length > 0) {
+      return (
+        <View className="sr-only items-center py-8">
+          <Text className="text-sm text-muted-foreground">
+            All {infiniteProducts.length} products loaded
+          </Text>
+        </View>
+      );
+    }
 
-  const renderEmpty = React.useCallback(() => {
-    if (isLoading) return null;
+    return <View style={{ height: 20 }} />;
+  }, [infiniteQuery.isFetchingNextPage, infiniteQuery.hasNextPage, infiniteProducts.length]);
 
+  // ✅ Render item
+  const renderItem = React.useCallback(({ item, index }: { item: Product; index: number }) => {
     return (
-      <View style={{ paddingVertical: 60, paddingHorizontal: 20, alignItems: 'center' }}>
-        <Text className="mb-2 text-center text-lg font-semibold">No products found</Text>
-        <Text className="mb-6 text-center text-sm text-muted-foreground">
-          Try refreshing or check back later
-        </Text>
-        <Button onPress={() => refetch()}>
-          <Text>Refresh</Text>
-        </Button>
+      <View className="relative mb-4 aspect-auto w-1/2 flex-grow">
+        <ProductCard index={index} Product={item} widht={2.25} />
       </View>
     );
-  }, [isLoading, refetch]);
+  }, []);
 
-  const renderHeader = React.useCallback(() => {
+  // Initial loading
+  if (infiniteQuery.isLoading) {
     return (
-      <View className="flex-row px-3 items-center gap-2">
-        <Text
-          variant={'h2'}
-          className="w-fit border-0 border-none font-Termina_Bold text-lg tracking-tighter">
-          Hot Items
-        </Text>
-        <Button variant={'secondary'} className="mb-2 h-fit w-fit rounded-full p-0.5" size={'icon'}>
-          <Icon
-            as={ChevronRight}
-            className={cn(
-              // buttonVariants({ variant: 'secondary', size: 'icon' }),
-              'rounded-full font-Termina_Bold'
-            )}
-            size={16}
-          />
-        </Button>
-      </View>
-    );
-  }, [products.length, totalCount, isAllLoaded]);
-
-  // ✅ Initial loading
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <LoadingSpinner text="Loading products..." />
-      </View>
+      <FlatList
+        data={Array.from({ length: 10 })}
+        renderItem={() => (
+          <View className="mb-3 w-1/2">
+            <ProductCardSkeleton />
+          </View>
+        )}
+        keyExtractor={(_, idx) => `skeleton-${idx}`}
+        numColumns={2}
+        columnWrapperStyle={{
+          justifyContent: 'center',
+          gap: 1,
+          paddingHorizontal: 12,
+          alignItems: 'center',
+        }}
+        ListHeaderComponent={<ListHeader />}
+        contentContainerStyle={{
+          paddingTop: 30,
+          gap: 9,
+          paddingBottom: 5, // ✅ Reduced padding
+        }}
+        scrollEnabled={true}
+      />
     );
   }
 
-  // ✅ Error state
-  if (isError) {
+  // Error state
+  if (infiniteQuery.isError) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Icon as={Loader2} size={48} className="mb-4 text-destructive" />
+      <View className="flex-1 items-center justify-center p-5">
         <Text className="mb-2 text-center text-lg font-semibold text-destructive">
-          Oops! Something went wrong
+          Failed to load products
         </Text>
         <Text className="mb-6 text-center text-sm text-muted-foreground">
-          {error?.message || 'Failed to load products'}
+          {infiniteQuery.error?.message}
         </Text>
-        <Button onPress={() => refetch()}>
+        <Button onPress={() => infiniteQuery.refetch()}>
           <Text>Try Again</Text>
         </Button>
       </View>
@@ -181,43 +227,34 @@ export default function HalamanUtama() {
 
   return (
     <FlatList
-      data={products}
+      data={infiniteProducts}
       renderItem={renderItem}
-      keyExtractor={(item, index) => `product-${item.id}-${index}`}
+      keyExtractor={(item) => `product-${item.id}`}
       numColumns={2}
       columnWrapperStyle={{
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        gap: 1,
+        paddingHorizontal: 12,
+        alignItems: 'center',
       }}
-      // ✅ Infinite scroll
-
+      ListHeaderComponent={<ListHeader />}
+      ListFooterComponent={<ListFooter />}
+      // ✅ CRITICAL FIXES
       onEndReached={handleLoadMore}
-      onEndReachedThreshold={0.5}
-      ListHeaderComponent={renderHeader}
-      ListFooterComponent={renderFooter}
-      ListEmptyComponent={renderEmpty}
+      onEndReachedThreshold={0.8} // ✅ Triggers EARLY!
       refreshControl={
-        <RefreshControl
-          refreshing={isFetching && !isFetchingNextPage}
-          onRefresh={refetch}
-          tintColor={tintColor}
-        />
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={tintColor} />
       }
       contentContainerStyle={{
-        paddingTop: 40,
-        gap: 7,
-        paddingHorizontal: 7,
-        paddingBottom: 120, // ✅ Space for native tabs
+        paddingTop: 30,
+        gap: 9,
+        paddingBottom: 5, // ✅ Reduced padding
       }}
-      // ✅ Performance optimizations
       removeClippedSubviews={true}
       maxToRenderPerBatch={10}
       windowSize={5}
       initialNumToRender={10}
-      updateCellsBatchingPeriod={50}
       showsVerticalScrollIndicator={false}
-      // ✅ Additional props
-      bounces={true}
-      overScrollMode="auto"
     />
   );
 }

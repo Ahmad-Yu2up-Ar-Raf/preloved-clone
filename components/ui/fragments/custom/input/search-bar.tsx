@@ -9,7 +9,7 @@ import { Button } from '../../shadcn-ui/button';
 export default function SearchBar() {
   const [searchText, setSearchText] = React.useState('');
   return (
-    <Pressable className="relative h-9 w-[87%] flex-row items-center gap-0 overflow-hidden rounded-xl bg-muted px-2.5">
+    <Pressable className="relative h-9 w-[87%] flex-row items-center gap-0 overflow-hidden rounded-2xl bg-muted px-2.5">
       <Icon as={SearchIcon} className="mr-2 size-5 text-muted-foreground/40" />
       <Input
         value={searchText}
