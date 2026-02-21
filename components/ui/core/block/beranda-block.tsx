@@ -21,7 +21,8 @@ import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
 import { router } from 'expo-router';
 import OnboardingCarousel from '../../fragments/custom/carousel/onboarding-carousel';
-
+import { LegendList, LegendListRef, LegendListRenderItemProps } from '@legendapp/list';
+import { cn } from '@/lib/utils';
 export default function HomeScreen() {
   const { colorScheme } = useColorScheme();
   const currentTheme = colorScheme ?? 'light';
@@ -168,7 +169,7 @@ export default function HomeScreen() {
   const ListHeader = React.useCallback(() => {
     const h = headerRef.current;
     return (
-      <View className="gap-8">
+      <View className="mb-4 gap-8">
         <OnboardingCarousel
           deskription="Pelajari cara pakai Preloved!"
           title="Welcome Kak"
@@ -218,7 +219,7 @@ export default function HomeScreen() {
     }
     if (hasNextPage === false && count > 0) {
       return (
-        <View className="items-center py-8">
+        <View className="sr-only items-center py-8">
           <Text className="text-sm text-muted-foreground">Semua {count} produk telah dimuat</Text>
         </View>
       );
@@ -228,7 +229,7 @@ export default function HomeScreen() {
 
   const renderItem = React.useCallback(
     ({ item, index }: { item: Product; index: number }) => (
-      <View className="relative mb-4 aspect-auto w-1/2 flex-grow">
+      <View className={cn('mb-3 w-1/2', index % 2 === 0 ? 'ml-[5.8rem]' : 'mr-1')}>
         <ProductCard index={index} Product={item} widht={2.25} />
       </View>
     ),
@@ -279,17 +280,11 @@ export default function HomeScreen() {
   }
 
   return (
-    <FlatList
+    <LegendList
       data={infiniteProducts}
       renderItem={renderItem}
       keyExtractor={(item) => `product-${item.id}`}
       numColumns={2}
-      columnWrapperStyle={{
-        justifyContent: 'center',
-        gap: 1,
-        paddingHorizontal: 12,
-        alignItems: 'center',
-      }}
       ListHeaderComponent={ListHeader}
       ListFooterComponent={ListFooter}
       extraData={combinedExtraData}
@@ -301,12 +296,10 @@ export default function HomeScreen() {
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={tintColor} />
       }
-      contentContainerStyle={{ paddingTop: 30, gap: 9, paddingBottom: 5 }}
+      contentContainerStyle={{ paddingTop: 30, gap: 9, paddingBottom: 100 }}
       // ✅ Android removeClippedSubviews bug → hanya aktifkan di iOS
-      removeClippedSubviews={Platform.OS === 'ios'}
-      maxToRenderPerBatch={10}
-      windowSize={7}
-      initialNumToRender={6}
+      maintainVisibleContentPosition
+      recycleItems={true}
       showsVerticalScrollIndicator={false}
     />
   );
