@@ -23,7 +23,7 @@ export function ProductCardSkeleton({
       style={{ width: CARD_WIDTH, height: CARD_WIDTH * 1.4 + 50 }}>
       {/* Image skeleton - matches ProductCard aspect ratio [3/4] */}
       <Skeleton
-        className="mb-1.5 aspect-[3/4] w-full rounded-sm"
+        className="mb-1.5 aspect-[3/4] w-full rounded-lg"
         style={{ width: CARD_WIDTH, height: CARD_WIDTH * 1.3 }}
       />
 

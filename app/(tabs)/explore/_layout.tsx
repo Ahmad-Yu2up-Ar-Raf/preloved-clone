@@ -1,40 +1,43 @@
 import React from 'react';
-import { MoonStarIcon, StarIcon, SunIcon } from 'lucide-react-native';
-import { Stack } from 'expo-router';
+import { Handbag, ShoppingBag } from 'lucide-react-native';
+import { router, Stack } from 'expo-router';
 import { Button } from '@/components/ui/fragments/shadcn-ui/button';
 import { Icon } from '@/components/ui/fragments/shadcn-ui/icon';
-import { useColorScheme } from 'nativewind';
+
+import SearchBar from '@/components/ui/fragments/custom/input/search-bar';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_OPTIONS = {
-  title: 'React Native Reusables',
-  headerTransparent: true,
-  headerRight: () => <ThemeToggle />,
+ 
+  header: () => (
+    <View
+      className="safe-area-inset-top left-0 right-0 top-5 h-fit flex-row items-center justify-between bg-background px-3.5 pb-2 web:mx-2"
+      style={{ paddingTop: useSafeAreaInsets().top - 20 }}>
+      <SearchBar />
+      <Whishlist />
+    </View>
+  ),
 };
 
 export default function HomeLayout() {
   return (
     <Stack>
-      <Stack.Screen  name='index' options={SCREEN_OPTIONS} />
+      <Stack.Screen name="index" options={SCREEN_OPTIONS} />
+      <Stack.Screen name="products" />
       {/* Tambahkan screen lain di sini jika ada nested routes */}
     </Stack>
   );
 }
 
-const THEME_ICONS = {
-  light: SunIcon,
-  dark: MoonStarIcon,
-};
-
-function ThemeToggle() {
-  const { colorScheme, toggleColorScheme } = useColorScheme();
-
+function Whishlist() {
   return (
     <Button
-      onPressIn={toggleColorScheme}
+      onPressIn={() => router.push('/keranjang')}
       size="icon"
       variant="ghost"
       className="ios:size-9 rounded-full web:mx-4">
-      <Icon as={THEME_ICONS[colorScheme ?? 'light']} className="size-5" />
+      <Icon as={ShoppingBag} size={22} className={'mix-blend-difference'} />
     </Button>
   );
 }

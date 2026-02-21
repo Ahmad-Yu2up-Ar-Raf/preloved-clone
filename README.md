@@ -1,73 +1,196 @@
-# Minimal Template
+# 🏷️ Preloved Clone App
 
-This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
+Clone frontend dari aplikasi [Preloved](https://preloved.co.id) — platform e-commerce jual beli barang fashion bekas terpercaya di Indonesia.
 
-It was initialized using the following command:
-
-```bash
-npx @react-native-reusables/cli@latest init -t practice-useEffect
-```
-
-## Getting Started
-
-To run the development server:
-
-```bash
-    npm run dev
-    # or
-    yarn dev
-    # or
-    pnpm dev
-    # or
-    bun dev
-```
-
-This will start the Expo Dev Server. Open the app in:
-
-- **iOS**: press `i` to launch in the iOS simulator _(Mac only)_
-- **Android**: press `a` to launch in the Android emulator
-- **Web**: press `w` to run in a browser
-
-You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
-
-## Adding components
-
-You can add more reusable components using the CLI:
-
-```bash
-npx react-native-reusables/cli@latest add [...components]
-```
-
-> e.g. `npx react-native-reusables/cli@latest add input textarea`
-
-If you don't specify any component names, you'll be prompted to select which components to add interactively. Use the `--all` flag to install all available components at once.
-
-## Project Features
-
-- ⚛️ Built with [Expo Router](https://expo.dev/router)
-- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Nativewind](https://www.nativewind.dev/)
-- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
-- 🚀 New Architecture enabled
-- 🔥 Edge to Edge enabled
-- 📱 Runs on iOS, Android, and Web
-
-## Learn More
-
-To dive deeper into the technologies used:
-
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Nativewind Docs](https://www.nativewind.dev/)
-- [React Native Reusables](https://reactnativereusables.com)
-
-## Deploy with EAS
-
-The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
-
-- [EAS Build](https://docs.expo.dev/build/introduction/)
-- [EAS Updates](https://docs.expo.dev/eas-update/introduction/)
-- [EAS Submit](https://docs.expo.dev/submit/introduction/)
+> **Catatan:** Ini adalah **learning project**. Hanya sisi frontend (UI/UX) yang diclone. Tidak ada backend, autentikasi, atau transaksi nyata. Data produk menggunakan [Platzi Fake Store API](https://api.escuelajs.co/api/v1).
 
 ---
 
-If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
+## 📱 Preview
+
+<div align="center">
+
+|                                                        |                           Light Mode                           |                                                      |
+| :----------------------------------------------------: | :------------------------------------------------------------: | :--------------------------------------------------: |
+| ![Beranda](./assets/images/mockup/ligth/beranda-1.png) | ![Produk](./assets/images/mockup/ligth/products-explore-1.png) | ![Detail](./assets/images/mockup/ligth/detail-1.png) |
+
+|                                                       |                      Dark Mode                       |                                                |
+| :---------------------------------------------------: | :--------------------------------------------------: | :--------------------------------------------: |
+| ![Explore](./assets/images/mockup/dark/keranjang.png) | ![Filter](./assets/images/mockup/dark/profile-1.png) | ![Dark](./assets/images/mockup/dark/inbox.png) |
+
+</div>
+
+---
+
+## ✨ Fitur
+
+- **Beranda** — Carousel produk (For You, Your Likes, Baru Dilihat), rekomendasi seller, dan hot items grid
+- **Infinite Scroll** — Load lebih banyak produk otomatis saat scroll ke bawah
+- **Filter Carousel** — Filter produk dengan animasi hide/show saat scroll
+- **Multi-Image Card** — Setiap produk bisa punya banyak gambar dengan swipe carousel
+- **Wishlist Button** — Animasi Lottie (lazy mount untuk performa optimal)
+- **Pull-to-Refresh** — Refresh semua data sekaligus
+- **Dark / Light Mode** — Support tema otomatis via NativeWind
+- **Image Fallback** — Handling gambar rusak dari Platzi API secara otomatis
+
+---
+
+## 🛠️ Tech Stack
+
+| Kategori     | Library                      |
+| ------------ | ---------------------------- |
+| Framework    | React Native + Expo SDK 52   |
+| Routing      | Expo Router v4               |
+| Server State | TanStack Query v5            |
+| Animasi      | React Native Reanimated v3   |
+| Styling      | NativeWind v4 (Tailwind CSS) |
+| Image        | expo-image                   |
+| Lottie       | lottie-react-native          |
+| Language     | TypeScript                   |
+| Data Source  | Platzi Fake Store API        |
+
+---
+
+## 📁 Struktur Proyek
+
+```
+preloved-clone/
+├── app/
+│   ├── (tabs)/
+│   │   ├── index.tsx          # Halaman beranda
+│   │   ├── explore.tsx        # Halaman explore
+│   │   └── products.tsx       # Halaman produk + filter
+│   ├── product/[id]/
+│   │   └── index.tsx          # Detail produk
+│   └── _layout.tsx            # Root layout + provider
+│
+├── components/
+│   ├── ui/core/block/
+│   │   ├── beranda-block.tsx  # Block utama beranda
+│   │   └── explore-products.tsx
+│   └── ui/fragments/
+│       ├── custom/card/product-card.tsx
+│       ├── custom/carousel/
+│       └── shadcn-ui/image.tsx
+│
+├── lib/server/products/
+│   ├── products-server.ts         # Fetch ke Platzi API
+│   ├── products-queris-server.ts  # TanStack Query options
+│   └── product-mappers.ts         # Transformasi data
+│
+└── type/
+    └── products-type.ts           # TypeScript types
+```
+
+---
+
+## 🚀 Cara Menjalankan
+
+### Prasyarat
+
+- Node.js 18+
+- Expo CLI: `npm install -g expo-cli`
+- iOS Simulator / Android Emulator **atau** Expo Go di HP
+
+### Instalasi
+
+```bash
+# Clone repo
+git clone https://github.com/username/preloved-clone.git
+cd preloved-clone
+
+# Install dependensi
+npm install
+
+# Jalankan
+npx expo start
+```
+
+### Jalankan di device/simulator
+
+```bash
+# iOS
+npx expo run:ios
+
+# Android
+npx expo run:android
+```
+
+---
+
+## 🔌 API
+
+Proyek ini menggunakan [Platzi Fake Store API](https://api.escuelajs.co/api/v1) sebagai sumber data dummy.
+
+| Endpoint                       | Keterangan                                       |
+| ------------------------------ | ------------------------------------------------ |
+| `GET /products`                | Ambil daftar produk (dengan filter & pagination) |
+| `GET /products/:id`            | Detail satu produk                               |
+| `GET /categories`              | Daftar kategori                                  |
+| `GET /categories/:id/products` | Produk per kategori                              |
+
+---
+
+## ⚙️ Konfigurasi TanStack Query
+
+Provider sudah dikonfigurasi di `app/_layout.tsx` dengan:
+
+```ts
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // Data fresh selama 1 menit
+      gcTime: 5 * 60 * 1000, // Cache disimpan 5 menit
+      retry: 1, // Retry sekali jika gagal
+    },
+  },
+});
+```
+
+**AppState integration** menggunakan `focusManager` (bukan `refetchQueries`) untuk mencegah cancel infinite scroll saat app kembali ke foreground:
+
+```ts
+AppState.addEventListener('change', (status) => {
+  focusManager.setFocused(status === 'active');
+});
+```
+
+---
+
+## 🐛 Bug Fixes & Optimasi
+
+Beberapa masalah teknis yang ditemukan dan diperbaiki selama pengerjaan:
+
+| Masalah                                   | Fix                                                       |
+| ----------------------------------------- | --------------------------------------------------------- |
+| Header tertutup carousel saat scroll      | Header manual sebagai absolute View (bukan Stack.Screen)  |
+| Infinite scroll delay / harus scroll lagi | `onMomentumScrollEnd` + `onScrollEndDrag` handlers        |
+| ListFooter spinner stuck / tidak update   | `useRef` pattern + empty deps `useCallback` + `extraData` |
+| Cache collision beranda vs explore        | `MAX_ITEMS` dimasukkan ke query key                       |
+| App lag berat dengan banyak produk        | `React.memo` pada ProductCard + lazy mount LottieView     |
+| `removeClippedSubviews` Android bug       | Hanya aktif di iOS                                        |
+| `queryClient.refetchQueries()` deadlock   | Ganti ke `focusManager.setFocused()`                      |
+
+---
+
+## 📖 Referensi
+
+- [Preloved App — App Store](https://apps.apple.com/id/app/preloved-buy-sell-fashion/id6502086431)
+- [preloved.co.id](https://preloved.co.id)
+- [Platzi Fake Store API](https://api.escuelajs.co/api/v1)
+- [TanStack Query — React Native](https://tanstack.com/query/latest/docs/react/react-native)
+- [Expo Router Docs](https://docs.expo.dev/router/introduction/)
+- [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/)
+
+---
+
+## 📄 Lisensi
+
+Proyek ini dibuat untuk tujuan belajar (educational purposes). Semua aset visual dan konsep UI mengacu pada aplikasi Preloved yang merupakan milik tim Preloved Indonesia.
+
+---
+
+<div align="center">
+  <p>Made with ❤️ sebagai learning project</p>
+  <p>Data by <a href="https://api.escuelajs.co/api/v1">Platzi Fake Store API</a></p>
+</div>

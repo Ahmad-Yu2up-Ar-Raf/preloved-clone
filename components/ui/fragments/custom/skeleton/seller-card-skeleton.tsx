@@ -10,11 +10,7 @@ type SellerCardSkeletonProps = {
   widht?: number;
 };
 
-export function SellerCardSkeleton({
-  className,
-  widht = 2.3,
-  ...props
-}: SellerCardSkeletonProps) {
+export function SellerCardSkeleton({ className, widht = 2.3, ...props }: SellerCardSkeletonProps) {
   const width = Dimensions.get('window').width;
   const CARD_WIDTH = width / 1.8;
   return (
@@ -23,7 +19,7 @@ export function SellerCardSkeleton({
       style={{ width: CARD_WIDTH }}>
       {/* Image skeleton - matches SellerCard aspect ratio [3/4] */}
       <Skeleton
-        className="mb-1.5 aspect-[3/4] w-full rounded-sm"
+        className="mb-1.5 aspect-[3/4] w-full rounded-lg"
         style={{ width: CARD_WIDTH, height: 110 }}
       />
 

@@ -10,7 +10,7 @@ import { HelloWave } from '../../shadcn-ui/hello-wave';
 import { Text } from '../../shadcn-ui/text';
 import { Onboarding } from '@/type/onboarding-type';
 import { OnboardingCard } from '../card/onboarding-card';
-import { OnboardingCardSkeleton } from '../skeleton/onboarding-card-skeleton';
+import { CardSkeleton } from '../skeleton/card-skeleton';
 
 type OnboardingCarouselProps = {
   title: string;
@@ -52,7 +52,7 @@ export default function OnboardingCarousel({
     return (
       <CarouselSkeleton
         showDescription={true}
-        cardSkeleton={<OnboardingCardSkeleton />}
+        cardSkeleton={<CardSkeleton />}
         itemCount={skeletonCount}
         className={className}
       />
@@ -60,7 +60,7 @@ export default function OnboardingCarousel({
   }
 
   return (
-    <View className={cn('w-full gap-3', className)}>
+    <View className={cn('w-full gap-4', className)}>
       {/* Section header with optional action */}
       <View className="relative w-fit gap-0 px-4">
         <Header title={title} className="mb-0 w-fit py-0" />

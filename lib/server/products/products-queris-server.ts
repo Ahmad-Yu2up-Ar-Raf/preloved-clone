@@ -1,4 +1,4 @@
-// lib/server/products/products-queris-server.ts - FIXED Platzi API queries
+// lib/server/products/products-queris-server.ts
 import { fetchProductById } from './products-server';
 import { mapPlatziProductToProduct } from '@/lib/utils/product-mappers';
 import { queryOptions, infiniteQueryOptions } from '@tanstack/react-query';
@@ -6,33 +6,28 @@ import {
   fetchProductsFromPlatzi,
   fetchProductsByCategory,
   fetchCategories,
-  getProductsTotalCount,
 } from './products-server';
-import { mapProductsResponse, mapProductsArray } from '@/lib/utils/product-mappers';
-import type { ProductFilters } from '@/type/products-type';
+import {
+  mapProductsResponse,
+  mapProductsArray as mapCategoriesArray,
+} from '@/lib/utils/product-mappers';
+import type { PlatziCategory, ProductFilters } from '@/type/products-type';
 
-// ✅ MAX ITEMS LIMIT - Hard stop at 30 products
-const MAX_ITEMS = 20;
-
-// ✅ Total products in Platzi API
 const TOTAL_PRODUCTS = 200;
 
-/**
- * Query keys for products
- */
 export const productKeys = {
   all: ['products'] as const,
   lists: () => [...productKeys.all, 'list'] as const,
   list: (filters: ProductFilters) => [...productKeys.lists(), filters] as const,
-  infinite: (filters: ProductFilters) => [...productKeys.all, 'infinite', filters] as const,
+  // ✅ MAX_ITEMS sekarang bagian dari key — lihat penjelasan di bawah
+  infinite: (filters: ProductFilters, maxItems: number) =>
+    [...productKeys.all, 'infinite', filters, { maxItems }] as const,
   categories: () => [...productKeys.all, 'categories'] as const,
-  category: (id: number) => [...productKeys.all, 'category', id] as const,
+  category: (id: number, filters?: Omit<ProductFilters, 'categoryId'>) =>
+    [...productKeys.all, 'category', id, filters ?? {}] as const,
+  detail: (id: number) => [...productKeys.all, 'detail', id] as const,
 };
 
-/**
- * Regular query for fetching limited products
- * Used for carousels
- */
 export function productQueryOptions(filters: ProductFilters = {}) {
   return queryOptions({
     queryKey: productKeys.list(filters),
@@ -45,137 +40,136 @@ export function productQueryOptions(filters: ProductFilters = {}) {
         price_max: filters.price_max,
         categoryId: filters.categoryId,
       });
-
       return {
-        products: mapProductsArray(products),
+        products: mapCategoriesArray(products),
         total: TOTAL_PRODUCTS,
       };
     },
-    staleTime: 60 * 1000, // 1 minute
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }
 
-/**
- * ✅ FIXED Infinite query with proper offset pagination
- * - Uses offset instead of skip
- * - Hard limit at 30 items
- * - Proper hasNextPage calculation
- */
-export function productInfiniteQueryOptions(filters: Omit<ProductFilters, 'offset'> = {}) {
+export function productInfiniteQueryOptions({
+  filters = {},
+  MAX_ITEMS = 20,
+}: {
+  filters?: Omit<ProductFilters, 'offset'>;
+  MAX_ITEMS?: number;
+}) {
   const pageSize = filters.limit ?? 10;
 
   return infiniteQueryOptions({
-    queryKey: productKeys.infinite(filters),
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🐛 ROOT CAUSE BUG #4 (PALING KRITIS): MAX_ITEMS tidak ada di query key!
+    //
+    // Sebelumnya: queryKey: productKeys.infinite(filters)
+    //   → ['products', 'infinite', { limit: 10 }]
+    //
+    // beranda-block.tsx    → MAX_ITEMS: 20, filters: { limit: 10 }
+    // explore-products.tsx → MAX_ITEMS: 45, filters: { limit: 10 }
+    //
+    // Kedua komponen ini punya query key IDENTIK: ['products', 'infinite', { limit: 10 }]
+    // → TanStack Query SHARE CACHE yang sama untuk keduanya!
+    //
+    // TIMELINE MASALAH:
+    //   1. beranda-block init duluan → MAX_ITEMS: 20 di-capture di getNextPageParam closure
+    //   2. Cache dibuat dengan identifier ['products', 'infinite', { limit: 10 }]
+    //   3. 20 items loaded → getNextPageParam return undefined → hasNextPage: false
+    //   4. explore-products init → BACA CACHE YANG SAMA (sudah ada 20 items)
+    //   5. explore-products lihat hasNextPage: false → tidak bisa load lebih!
+    //   6. User scroll, onEndReached fire → hasNextPage false → handleLoadMore return early
+    //   7. Tapi karena masih di ujung, onEndReached fire terus → UI glitch
+    //
+    // ATAU sebaliknya (explore init duluan):
+    //   1. explore init → MAX_ITEMS: 45, load 45 items
+    //   2. beranda baca cache yang sama → dapat 45 items padahal minta 20
+    //   3. Beranda menampilkan 45 items di home screen → performa buruk
+    //
+    // ✅ FIX: Include MAX_ITEMS di query key
+    //   beranda: ['products', 'infinite', { limit: 10 }, { maxItems: 20 }]
+    //   explore: ['products', 'infinite', { limit: 10 }, { maxItems: 45 }]
+    //   → Cache TERPISAH → masing-masing punya getNextPageParam closure sendiri
+    //   → MAX_ITEMS berfungsi dengan benar di masing-masing konteks
+    // ─────────────────────────────────────────────────────────────────────────
+    queryKey: productKeys.infinite(filters, MAX_ITEMS),
+
     queryFn: async ({ pageParam }) => {
       const products = await fetchProductsFromPlatzi({
         limit: pageSize,
-        offset: pageParam, // ✅ offset: 0, 10, 20, 30...
+        offset: pageParam,
         title: filters.title,
         price_min: filters.price_min,
         price_max: filters.price_max,
         categoryId: filters.categoryId,
       });
-
-      // Map to UI type with pagination metadata
       return mapProductsResponse(products, pageParam, pageSize, TOTAL_PRODUCTS);
     },
     initialPageParam: 0,
-
-    // ✅ FIXED: Proper pagination logic with 30 item limit
     getNextPageParam: (lastPage, allPages) => {
-      // ✅ Count total loaded items
       const totalLoaded = allPages.reduce((acc, page) => acc + page.products.length, 0);
-
-      // ✅ STOP if reached MAX_ITEMS (30)
-      if (totalLoaded >= MAX_ITEMS) {
-        return undefined;
-      }
-
-      // ✅ STOP if no more data from API
-      if (!lastPage.hasNextPage) {
-        return undefined;
-      }
-
-      // ✅ Return next offset
+      if (totalLoaded >= MAX_ITEMS) return undefined;
+      if (!lastPage.hasNextPage) return undefined;
       return lastPage.nextOffset;
     },
-
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1000,
   });
 }
 
-/**
- * Query for products by category
- */
 export function productCategoryQueryOptions(
   categoryId: number,
   filters: Omit<ProductFilters, 'categoryId'> = {}
 ) {
   return queryOptions({
-    queryKey: productKeys.category(categoryId),
+    queryKey: productKeys.category(categoryId, filters),
     queryFn: async () => {
       const products = await fetchProductsByCategory(categoryId, {
         limit: filters.limit ?? 10,
         offset: filters.offset ?? 0,
       });
-
       return {
-        products: mapProductsArray(products),
+        products: mapCategoriesArray(products),
         total: products.length,
         categoryId,
       };
     },
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 }
 
-/**
- * Query for all categories
- */
 export function categoriesQueryOptions() {
   return queryOptions({
     queryKey: productKeys.categories(),
     queryFn: async () => {
-      return await fetchCategories();
+      const categories = await fetchCategories();
+      return {
+        categories: categories as PlatziCategory[],
+      };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 1,
   });
 }
 
-// ✅ TAMBAHKAN INI ke file products-queris-server.ts yang sudah ada
-// Tambahkan import fetchProductById di bagian atas:
-// import { fetchProductsFromPlatzi, fetchProductsByCategory, fetchCategories, getProductsTotalCount, fetchProductById } from './products-server';
-
- 
-
-
-// ✅ Tambahkan key 'detail' ke productKeys
-// productKeys.detail = (id: number) => [...productKeys.all, 'detail', id] as const,
-
-/**
- * ✅ Query options untuk single product by ID
- * Gunakan ini di halaman detail product dengan useQuery()
- */
 export function productByIdQueryOptions(id: number) {
   return queryOptions({
-    // Key unik per product ID — otomatis di-cache & reuse
-    queryKey: ['products', 'detail', id],
-
+    queryKey: productKeys.detail(id),
     queryFn: async () => {
       const raw = await fetchProductById(id);
-      // ✅ Gunakan mapper yang sudah ada — sanitize images sekalian
       return mapPlatziProductToProduct(raw);
     },
-
-    // Data product jarang berubah — cache agak lama
-    staleTime: 5 * 60 * 1000,   // 5 menit
-    gcTime: 30 * 60 * 1000,     // 30 menit
-
-    // ✅ Jangan fetch kalau id tidak valid
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     enabled: !!id && !isNaN(id),
+    retry: 1,
   });
 }

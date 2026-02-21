@@ -74,6 +74,40 @@ function Routes() {
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="product" options={{ headerShown: false }} />
+      <Stack.Screen name="keranjang" options={SCREEN_OPTIONS} />
     </Stack>
+  );
+}
+
+import { ChevronLeft, Handbag, ShoppingBag } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { Button } from '@/components/ui/fragments/shadcn-ui/button';
+import { Icon } from '@/components/ui/fragments/shadcn-ui/icon';
+
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Header } from '@/components/ui/fragments/custom/typography/header';
+
+const SCREEN_OPTIONS = {
+  headerTransparent: true,
+  header: () => (
+    <View
+      className="safe-area-inset-top left-0 right-0 top-5 h-fit flex-row items-center justify-start bg-background px-3.5 pb-2 web:mx-2"
+      style={{ paddingTop: useSafeAreaInsets().top - 20 }}>
+      <Goback />
+      <Header title="Keranjang" className="m-0 w-full p-0 text-center" />
+    </View>
+  ),
+};
+
+function Goback() {
+  return (
+    <Button
+      onPressIn={() => router.push('/(tabs)/explore')}
+      size="icon"
+      variant="ghost"
+      className="ios:size-9 flex-1 rounded-full web:mx-4">
+      <Icon as={ChevronLeft} size={30} className="mix-blend-difference" />
+    </Button>
   );
 }

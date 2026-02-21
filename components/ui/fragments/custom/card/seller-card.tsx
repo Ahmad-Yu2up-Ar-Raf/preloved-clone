@@ -89,7 +89,7 @@ export function SellerCard({
       {...props}>
       {/* ─── Top 3 Product Images Grid ──────────────────────── */}
       {/* ✅ FIXED: Use explicit px height, NOT h-full / h-1/2  */}
-      <CardHeader className="mb-1.5 overflow-hidden rounded-2xl bg-muted p-0">
+      <CardHeader className="mb-1.5 overflow-hidden rounded-xl bg-muted p-0">
         <View style={{ height: HEADER_HEIGHT, flexDirection: 'row', gap: 2 }}>
           {/* Left column: 2 stacked images */}
           <View style={{ flex: 1, gap: 2 }}>
@@ -117,7 +117,7 @@ export function SellerCard({
         <View style={{ marginTop: -60, alignItems: 'center', width: '100%' }} className="gap-1.5">
           {/* Avatar */}
           <Avatar
-            className="mb-1 size-12 overflow-hidden rounded-full border-2 border-background"
+            className="mb-1 size-12 overflow-hidden rounded-full border-2 border-background bg-background"
             alt={`${seller.name} avatar`}>
             <AvatarImage source={{ uri: cleanAvatar }} className="h-full w-full" />
             <AvatarFallback>

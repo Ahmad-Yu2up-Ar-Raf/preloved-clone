@@ -68,7 +68,7 @@ export function OnboardingCard({
               height: '100%',
             }}
           />
-          <View className="relative z-30 h-full w-full items-start justify-end gap-0.5 overflow-hidden rounded-2xl p-3 pr-20">
+          <View className="relative z-30 h-full w-full items-start justify-end gap-0.5 overflow-hidden rounded-xl p-3">
             <CardHeader className="w-full flex-row items-center gap-1 p-0">
               <CardTitle className="text-xs font-semibold tracking-tight text-white">
                 {onboarding.title}

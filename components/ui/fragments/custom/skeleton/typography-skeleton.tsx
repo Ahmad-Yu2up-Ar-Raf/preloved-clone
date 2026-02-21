@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type { ViewProps } from 'react-native';
 
 type TypographySkeletonProps = {
-  width?: number  ;
+  width?: number;
   height?: number;
   className?: string;
 } & ViewProps;
@@ -17,7 +17,7 @@ export function TypographySkeleton({
   className,
   ...props
 }: TypographySkeletonProps) {
-  return <Skeleton className={cn('rounded', className)} style={{ width, height }}{...props} />;
+  return <Skeleton className={cn('rounded-xl', className)} style={{ width, height }} {...props} />;
 }
 
 /**

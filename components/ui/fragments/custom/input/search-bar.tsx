@@ -6,10 +6,10 @@ import { SearchIcon, XIcon } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { Button } from '../../shadcn-ui/button';
 
-export default function SearchBar() {
+export default function SearchBar({ className }: { className?: string }) {
   const [searchText, setSearchText] = React.useState('');
   return (
-    <Pressable className="relative h-9 w-[87%] flex-row items-center gap-0 overflow-hidden rounded-2xl bg-muted px-2.5">
+    <Pressable className={cn("relative h-9 w-[87%] flex-row items-center gap-0 overflow-hidden rounded-xl bg-muted px-2.5", className)}>
       <Icon as={SearchIcon} className="mr-2 size-5 text-muted-foreground/40" />
       <Input
         value={searchText}
@@ -23,7 +23,7 @@ export default function SearchBar() {
         size="icon"
         variant="default"
         className={cn(
-          'ios:size-9 absolute right-2 size-5 rounded-full bg-muted-foreground/40 p-1 transition-all duration-100 ease-out',
+          'ios:size-9 absolute right-2 size-5 rounded-full bg-muted-foreground/40 p-1 transition-all duration-300 ease-in-out',
           searchText.length > 0 ? 'scale-100' : 'scale-0'
         )}>
         <Icon as={XIcon} className={cn('size-full text-background')} />

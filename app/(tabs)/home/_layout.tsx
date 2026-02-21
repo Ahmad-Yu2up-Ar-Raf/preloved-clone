@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handbag, ShoppingBag } from 'lucide-react-native';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { Button } from '@/components/ui/fragments/shadcn-ui/button';
 import { Icon } from '@/components/ui/fragments/shadcn-ui/icon';
 
@@ -9,8 +9,6 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_OPTIONS = {
- 
-  headerTrasnparent: true,
   header: () => (
     <View
       className="safe-area-inset-top left-0 right-0 top-5 h-fit flex-row items-center justify-between bg-background px-3.5 pb-2 web:mx-2"
@@ -33,7 +31,7 @@ export default function HomeLayout() {
 function Whishlist() {
   return (
     <Button
-      // onPressIn={toggleColorScheme}
+      onPressIn={() => router.push('/keranjang')}
       size="icon"
       variant="ghost"
       className="ios:size-9 rounded-full web:mx-4">

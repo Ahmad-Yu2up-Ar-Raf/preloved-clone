@@ -1,14 +1,17 @@
 // app/(tabs)/_layout.tsx
-import { Stack, Tabs } from 'expo-router';
+import { router, Stack, Tabs, usePathname } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { THEME } from '@/lib/theme';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ Import ini
 import { Icon } from '@/components/ui/fragments/shadcn-ui/icon';
 import { CirclePlus, Home, Mail, Search, User, UserRound } from 'lucide-react-native';
-import { HapticTab } from '@/components/haptic-tab';
 
+import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Pressable, Vibration } from 'react-native';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/fragments/shadcn-ui/button';
 
 export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
@@ -16,29 +19,56 @@ export default function TabsLayout() {
   const tintColor = THEME[currentTheme].primary;
   const backgroundColor = THEME[currentTheme].background;
   const inactiveTintColor = THEME[currentTheme].mutedForeground;
+  const foreground = THEME[currentTheme].foreground;
 
   const insets = useSafeAreaInsets(); // ✅ Dapetin safe area insets
-
+  const ONE_SECOND_IN_MS = 30;
+  const pathname = usePathname();
+  const PATTERN = [1 * ONE_SECOND_IN_MS, 2 * ONE_SECOND_IN_MS, 3 * ONE_SECOND_IN_MS];
   return (
     <>
       <Tabs
         screenOptions={{
-          tabBarButton: HapticTab,
+          tabBarButton: ({ children, onPress, tabIndex }) => (
+            <Button
+              variant={'ghost'}
+              onPressIn={(ev) => {
+                Vibration.vibrate(PATTERN);
+                if (process.env.EXPO_OS === 'ios') {
+                  // Add a soft haptic feedback when pressing down on the tabs.
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                onPress?.(ev);
+              }}
+              style={{ justifyContent: 'center', alignItems: 'center' }}
+              android_ripple={{
+                radius: 100,
+
+                foreground: true,
+              }}
+              className={cn(
+                'h-full w-full flex-col content-center items-center justify-center gap-0 overflow-hidden rounded-lg p-0 font-Termina_Medium'
+              )}>
+              {children}
+            </Button>
+          ),
           headerShown: false,
           tabBarActiveTintColor: tintColor,
+
           tabBarInactiveTintColor: inactiveTintColor,
           tabBarStyle: {
+            display: pathname === '/jual' ? 'none' : 'flex',
             backgroundColor,
-            paddingBottom: insets.bottom, // ✅ CRITICAL: Apply bottom inset
-            height: 53 + insets.bottom, // ✅ CRITICAL: Tinggi + bottom inset
-            paddingTop: 2,
+            overflow: 'hidden',
+            height: 50 + insets.bottom, // ✅ CRITICAL: Tinggi + bottom inset
+            paddingTop: 0,
             borderTopWidth: 0.5,
             borderTopColor: THEME[currentTheme].border,
           },
           tabBarLabelStyle: {
-            fontSize: 10.3,
+            fontSize: 10,
             fontWeight: '600',
-            marginTop: 1,
+            marginTop: 0,
           },
         }}>
         <Tabs.Screen
@@ -49,7 +79,7 @@ export default function TabsLayout() {
               <Icon
                 as={Home}
                 fill={focused ? tintColor : backgroundColor}
-                size={22}
+                size={20}
                 color={color}
               />
             ),
@@ -60,18 +90,19 @@ export default function TabsLayout() {
           options={{
             title: 'Search',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'search' : 'search-outline'} size={23} color={color} />
+              <Ionicons name={focused ? 'search' : 'search-outline'} size={21} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="jual"
           options={{
+            headerShown: false,
             title: 'Jual',
             tabBarIcon: ({ color, focused }) => (
               <MaterialCommunityIcons
                 name={focused ? 'plus-circle' : 'plus-circle-outline'}
-                size={22}
+                size={20}
                 color={color}
               />
             ),
@@ -80,9 +111,10 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="inbox"
           options={{
+            headerShown: false,
             title: 'Inbox',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? 'mail' : 'mail-outline'} size={23} color={color} />
+              <Ionicons name={focused ? 'mail' : 'mail-outline'} size={21} color={color} />
             ),
           }}
         />
@@ -93,7 +125,7 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, focused }) => (
               <MaterialCommunityIcons
                 name={focused ? 'account' : 'account-outline'}
-                size={24}
+                size={20}
                 color={color}
               />
             ),

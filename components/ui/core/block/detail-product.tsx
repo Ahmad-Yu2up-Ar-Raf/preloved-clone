@@ -1,4 +1,7 @@
 // components/ui/core/block/detail-product.tsx
+// ✅ FIX: sameSeller carousel pakai productQueryOptions (offset 80)
+// bukan productCategoryQueryOptions yang broken di Platzi
+
 import { Pressable, View, ViewStyle } from 'react-native';
 import React from 'react';
 import { Product, ProductFilters } from '@/type/products-type';
@@ -9,7 +12,6 @@ import Animated, {
   AnimatedScrollViewProps,
   AnimatedStyle,
   FadeInDown,
-  FadeInUp,
 } from 'react-native-reanimated';
 import { Text } from '../../fragments/shadcn-ui/text';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/fragments/shadcn-ui/avatar';
@@ -29,16 +31,17 @@ import { Button, buttonTextVariants, buttonVariants } from '../../fragments/shad
 import { Badge } from '../../fragments/shadcn-ui/badge';
 import { ImagesPreview } from '../../fragments/custom/dialog/images-dialog';
 import { Separator } from '../../fragments/shadcn-ui/separator';
-import { Href, Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { cn } from '@/lib/utils';
-import { formatDistance, format, subDays } from 'date-fns';
+import { formatDistance, subDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import {
-  productCategoryQueryOptions,
-  productQueryOptions,
+  productQueryOptions, // ✅ Ganti dari productCategoryQueryOptions
+  productCategoryQueryOptions, // ✅ Tetap pakai untuk "kamu mungkin suka" karena works
 } from '@/lib/server/products/products-queris-server';
 import ProductCarousel from '../../fragments/custom/carousel/product-carousel';
+
 type DetailProductProps = {
   Product: Product;
   CARD_WIDTH: number;
@@ -68,10 +71,8 @@ export default function DetailProduct({
 }: DetailProductProps) {
   function navigateToCategory(category: string) {
     router.push({
-      // ✅ Static string — Expo Router bisa infer type-nya
       pathname: '/(tabs)/explore',
-      // ✅ ID dipisah ke params — runtime akan inject ke [id]
-      params: { category: category },
+      params: { category },
     });
   }
 
@@ -79,6 +80,7 @@ export default function DetailProduct({
     addSuffix: true,
     locale: id,
   });
+
   const menuDetails: MenuDetail[] = [
     {
       Label: 'Kategori',
@@ -97,19 +99,29 @@ export default function DetailProduct({
   ];
 
   const images = Product.images || [];
-  const filter: ProductFilters = {
-    limit: 10,
-    price_max: 35,
-  };
-  // ✅ null = tutup | number = buka di index tersebut
-  const sameSeller = useQuery(productQueryOptions(filter));
   const [showPreview, setShowPreview] = React.useState<number | null>(null);
   const [showAll, setShowAll] = React.useState(false);
 
-  const similarProducts = useQuery(productCategoryQueryOptions(Product.category.id, { limit: 5 }));
+  // ✅ FIX "Lainnya dari seller":
+  // Sebelum: productCategoryQueryOptions(3) → /categories/3/products → sering empty
+  // Sesudah: productQueryOptions({ offset: 80 }) → /products → SELALU ada data
+  // Offset 80 dipilih supaya berbeda dari carousel di beranda (0, 30, 60) & infinite scroll
+  const sameSellerQuery = useQuery(productQueryOptions({ limit: 6, offset: 30 }));
+
+  // ✅ "Kamu mungkin suka" tetap pakai category ID dari product
+  // Ini works karena Product.category.id dari produk yang sedang dibuka
+  // adalah ID yang memang ada di Platzi (bukan hardcode angka random)
+  const similarProductsQuery = useQuery(
+    productCategoryQueryOptions(Product.category.id, { limit: 5 })
+  );
+
   return (
     <>
-      <Wrapper edges={['bottom']} scrollRef={scrollRef} onScroll={onScroll} className="pb-20">
+      <Wrapper
+        edges={['bottom']}
+        scrollRef={scrollRef}
+        onScroll={onScroll}
+        className="gap-0s pb-20">
         <ProductGallery
           setShowPreview={setShowPreview}
           imageAnimationStyle={imageAnimationStyle}
@@ -118,7 +130,8 @@ export default function DetailProduct({
           IMAGE_HEIGHT={IMAGE_HEIGHT}
         />
 
-        <View className="gap-5 bg-background py-3">
+        <View className="gap-5 bg-background py-0">
+          {/* Seller info */}
           <View className="gap-3 px-4">
             <View className="w-full flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
@@ -153,36 +166,39 @@ export default function DetailProduct({
 
             <View className="w-fit flex-row gap-2">
               <Badge variant="secondary" className="w-fit gap-1.5 px-2.5 py-1">
-                <Icon as={Flame} className=" " />
+                <Icon as={Flame} />
                 <Text variant="small">Staff Pick</Text>
               </Badge>
               <Badge variant="secondary" className="w-fit gap-1.5 px-2.5 py-1">
-                <Icon as={ShoppingBag} className=" " />
+                <Icon as={ShoppingBag} />
                 <Text variant="small">2 Terjual</Text>
               </Badge>
             </View>
           </View>
+
           <Separator className="border-accent" />
+
+          {/* Title & Price */}
           <View className="gap-4 border-border px-4">
             <View className="gap-0.5">
               <Text variant="h3" className="text-sm font-medium capitalize">
                 {Product.title}
               </Text>
-
-              <Text variant={'muted'}>Baik • Lengkap</Text>
+              <Text variant="muted">Baik • Lengkap</Text>
             </View>
             <Text variant="h3" className="text-sm font-medium capitalize">
               {Product.price.toLocaleString('id-ID', {
                 style: 'currency',
                 minimumFractionDigits: 3,
                 maximumFractionDigits: 5,
-
                 currency: 'IDR',
               })}
             </Text>
           </View>
+
           <Separator className="h-2.5 border-2 border-t border-accent" />
 
+          {/* Description */}
           <View className="gap-0 px-4">
             <Text variant="muted" className="text-sm font-medium">
               Detail
@@ -195,30 +211,29 @@ export default function DetailProduct({
             <Pressable
               onPress={() => setShowAll((prev) => !prev)}
               className={cn('mt-1 w-fit', showAll && 'sr-only')}>
-              <Text
-                variant={'small'}
-                className={cn('text-xs text-blue-500 underline underline-offset-2')}>
+              <Text variant="small" className="text-xs text-blue-500 underline underline-offset-2">
                 Lihat Detail
               </Text>
             </Pressable>
           </View>
+
           {showAll && (
             <Animated.View entering={FadeInDown.duration(200)}>
               {menuDetails.map((detail, i) => (
                 <Button
                   key={i}
-                  variant={'outline'}
+                  variant="outline"
                   onPress={detail.onPress}
                   className={cn(
                     'h-fit w-full justify-between rounded-none bg-background py-4 dark:bg-background',
-                    i != menuDetails.length - 1 ? 'border-b-0' : 'border-b-0',
+                    'border-b-0',
                     detail.onPress
                       ? 'active:bg-accent dark:active:bg-input/50'
                       : 'active:bg-transparent dark:active:bg-transparent'
                   )}>
-                  <Text variant={'h4'}>{detail.Label}</Text>
+                  <Text variant="h4">{detail.Label}</Text>
                   <View className="flex-row items-center gap-1">
-                    <Text variant={'p'} className="m-0 p-0">
+                    <Text variant="p" className="m-0 p-0">
                       {detail.Value}
                     </Text>
                     <Icon
@@ -231,11 +246,14 @@ export default function DetailProduct({
               ))}
             </Animated.View>
           )}
+
           <Separator className="h-2.5 border-2 border-t border-accent" />
+
+          {/* Garansi */}
           <Button
             className="h-fit w-full justify-between rounded-none px-4 active:bg-transparent active:opacity-70 dark:active:bg-transparent"
-            variant={'ghost'}
-            size={'lg'}>
+            variant="ghost"
+            size="lg">
             <View className="w-fit flex-1 flex-row items-center gap-2">
               <View
                 className={cn(
@@ -246,17 +264,20 @@ export default function DetailProduct({
                 <Icon as={ShieldCheck} size={24} />
               </View>
               <View className="w-full flex-1 gap-1">
-                <Text variant={'h4'} className="text-left text-sm font-medium">
+                <Text variant="h4" className="text-left text-sm font-medium">
                   Garansi Pembelian
                 </Text>
-                <Text variant={'muted'} className="text-left text-sm text-muted-foreground">
+                <Text variant="muted" className="text-left text-sm text-muted-foreground">
                   Belanja di preloved aman dengan garansi uang kembali
                 </Text>
               </View>
             </View>
             <Icon as={ChevronRight} size={20} />
           </Button>
+
           <Separator className="h-2.5 border-2 border-t border-accent" />
+
+          {/* Seller card */}
           <View className="gap-5 px-4">
             <View className="w-full flex-row items-center justify-between">
               <View className="flex-row items-center gap-3">
@@ -271,14 +292,13 @@ export default function DetailProduct({
                     <Text className="text-xs font-semibold">PL</Text>
                   </AvatarFallback>
                 </Avatar>
-                <View className="gap-2">
+                <View className="gap-1">
                   <Text variant="h3" className="m-0 border-0 p-0 text-sm font-medium">
                     Preloved{'  '}
                     <Text variant="muted" className="m-0 -mt-1 border-0 p-0 font-normal">
                       • Bogor
                     </Text>
                   </Text>
-
                   <View className="m-0 flex-row items-center gap-1 p-0">
                     <Icon className="fill-blue-700 text-blue-700" size={12} as={Star} />
                     <Text className="text-xs">4.8</Text>
@@ -305,31 +325,31 @@ export default function DetailProduct({
               </Button>
             </View>
           </View>
+
           <Separator className="h-2.5 border-2 border-t border-accent" />
+
+          {/* Carousels */}
           <View className="gap-6">
+            {/* ✅ Carousel 1: "Lainnya dari seller" — pakai /products offset 80, bukan category */}
             <ProductCarousel
               title="Lainnya dari seller"
-              products={sameSeller.data?.products ?? []}
-              isLoading={sameSeller.isLoading}
-              onSeeAllPress={() => {
-                router.push(`/(tabs)/explore?category=${Product.category.id}`);
-              }}
+              products={sameSellerQuery.data?.products ?? []}
+              isLoading={sameSellerQuery.isLoading}
+              onSeeAllPress={() => router.push('/(tabs)/explore')}
             />
+
             <Separator className="border-accent" />
+
+            {/* ✅ Carousel 2: "Kamu mungkin suka" — tetap by category ID (works) */}
             <ProductCarousel
               title="Kamu mungkin suka"
-              products={similarProducts.data?.products ?? []}
-              isLoading={similarProducts.isLoading}
+              products={similarProductsQuery.data?.products ?? []}
+              isLoading={similarProductsQuery.isLoading}
             />
           </View>
         </View>
       </Wrapper>
 
-      {/*
-       * ✅ Mount/unmount = trigger FadeIn/FadeOut Reanimated di ImagesPreview
-       * showPreview !== null → render → FadeIn
-       * setShowPreview(null) → unmount → FadeOut
-       */}
       {showPreview !== null && (
         <ImagesPreview images={images} curentIndex={showPreview} setShowPreview={setShowPreview} />
       )}

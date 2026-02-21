@@ -12,12 +12,14 @@ type CarouselSkeletonProps = {
   showDescription?: boolean;
   className?: string;
   cardSkeleton?: React.ReactNode;
+  style?: object;
 };
 
 export function CarouselSkeleton({
   itemCount = 5,
   showTitle = true,
   showDescription = false,
+  style,
   className,
   cardSkeleton = <ProductCardSkeleton widht={2.7} />,
 }: CarouselSkeletonProps) {
@@ -35,10 +37,8 @@ export function CarouselSkeleton({
       {showTitle && (
         <View className="px-4">
           <TypographySkeletonVariants.Header />
-          <TypographySkeletonVariants.Subtitle />
         </View>
       )}
-
       {/* Horizontal scrolling skeleton cards */}
       <ScrollView
         horizontal
@@ -46,6 +46,8 @@ export function CarouselSkeleton({
         contentContainerStyle={{
           paddingHorizontal: 16,
           gap: 11,
+          ...style,
+          
         }}
         snapToInterval={200} // Smooth snapping (adjust based on card width)
         snapToAlignment="start">

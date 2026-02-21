@@ -1,10 +1,10 @@
-// app/(tabs)/home/index.tsx - COMPLETE FIXED with Platzi API
+// components/ui/core/block/beranda-block.tsx
 
 import React from 'react';
-import { View, FlatList, RefreshControl } from 'react-native';
+import { View, FlatList, RefreshControl, Platform } from 'react-native';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
-  productCategoryQueryOptions,
+  productQueryOptions,
   productInfiniteQueryOptions,
 } from '@/lib/server/products/products-queris-server';
 import { sellerQueryOptions } from '@/lib/server/sellers/sellers-queris-server';
@@ -15,12 +15,11 @@ import { ProductCardSkeleton } from '@/components/ui/fragments/custom/skeleton/p
 import { HeaderAction } from '@/components/ui/fragments/custom/typography/header';
 import { Text } from '@/components/ui/fragments/shadcn-ui/text';
 import { Button } from '@/components/ui/fragments/shadcn-ui/button';
-import { Spinner } from '@/components/ui/fragments/shadcn-ui/spinner';
+import { Spinner } from '../../fragments/shadcn-ui/spinner';
 import type { Product } from '@/type/products-type';
 import { useColorScheme } from 'nativewind';
 import { THEME } from '@/lib/theme';
 import { router } from 'expo-router';
- 
 import OnboardingCarousel from '../../fragments/custom/carousel/onboarding-carousel';
 
 export default function HomeScreen() {
@@ -28,158 +27,220 @@ export default function HomeScreen() {
   const currentTheme = colorScheme ?? 'light';
   const tintColor = THEME[currentTheme].primary;
 
-  // ✅ Query 1: Clothes category (categoryId: 1)
-  const clothesQuery = useQuery(productCategoryQueryOptions(5, { limit:6 }));
-
-  // ✅ Query 2: Electronics category (categoryId: 2)
-  const electronicsQuery = useQuery(productCategoryQueryOptions(4, { limit: 2 }));
-
-  // ✅ Query 3: Furniture category (categoryId: 3)
-  const furnitureQuery = useQuery(productCategoryQueryOptions(3, { limit: 5 }));
-
-  // ✅ Query 4: Sellers with top products (PLATZI!)
+  const forYouQuery = useQuery(productQueryOptions({ limit: 6, offset: 0 }));
+  const yourLikesQuery = useQuery(productQueryOptions({ limit: 6, offset: 30 }));
+  const recentQuery = useQuery(productQueryOptions({ limit: 6, offset: 20 }));
   const sellersQuery = useQuery(sellerQueryOptions({ limit: 4 }));
 
-  // ✅ Query 5: Infinite scroll - FIXED!
   const infiniteQuery = useInfiniteQuery(
     productInfiniteQueryOptions({
-      limit: 10,
+      filters: { limit: 10 },
+      MAX_ITEMS: 20,
     })
   );
 
-  // ✅ Flatten pages - memoized
   const infiniteProducts = React.useMemo(
     () => infiniteQuery.data?.pages.flatMap((page) => page.products) ?? [],
     [infiniteQuery.data?.pages]
   );
 
-  // ✅ FIXED: NO DEBOUNCE, instant guard
+  // ─── isLoadingMoreRef: immediate guard, sama seperti explore-products ───
+  const isLoadingMoreRef = React.useRef(false);
+
+  // ─── FOOTER REF PATTERN ─────────────────────────────────────────────────
+  const footerRef = React.useRef({
+    isFetchingNextPage: false,
+    hasNextPage: true as boolean | undefined,
+    count: 0,
+  });
+  footerRef.current.isFetchingNextPage = infiniteQuery.isFetchingNextPage;
+  footerRef.current.hasNextPage = infiniteQuery.hasNextPage;
+  footerRef.current.count = infiniteProducts.length;
+
+  const footerExtraData = React.useMemo(
+    () => ({
+      f: infiniteQuery.isFetchingNextPage,
+      h: infiniteQuery.hasNextPage,
+      c: infiniteProducts.length,
+    }),
+    [infiniteQuery.isFetchingNextPage, infiniteQuery.hasNextPage, infiniteProducts.length]
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🐛 ROOT CAUSE BERANDA BUG #1: handleLoadMore missing isLoadingMoreRef
+  //
+  // Tanpa isLoadingMoreRef, ketika onEndReached + onMomentumScrollEnd keduanya
+  // fire hampir bersamaan (keduanya diperlukan), fetchNextPage() bisa dipanggil
+  // dua kali sebelum React state update isFetchingNextPage: true.
+  //
+  // ✅ FIX: Triple guard — sama persis dengan explore-products.tsx
+  // ─────────────────────────────────────────────────────────────────────────
   const handleLoadMore = React.useCallback(() => {
-    if (!infiniteQuery.hasNextPage || infiniteQuery.isFetchingNextPage) {
-      return; // Early exit
-    }
-    infiniteQuery.fetchNextPage(); // Direct call
+    if (!infiniteQuery.hasNextPage || infiniteQuery.isFetchingNextPage || isLoadingMoreRef.current)
+      return;
+
+    isLoadingMoreRef.current = true;
+    infiniteQuery.fetchNextPage().finally(() => {
+      isLoadingMoreRef.current = false;
+    });
   }, [infiniteQuery]);
 
-  // Refetch all
   const handleRefresh = React.useCallback(() => {
-    clothesQuery.refetch();
-    electronicsQuery.refetch();
-    furnitureQuery.refetch();
+    isLoadingMoreRef.current = false;
+    forYouQuery.refetch();
+    yourLikesQuery.refetch();
+    recentQuery.refetch();
     sellersQuery.refetch();
     infiniteQuery.refetch();
-  }, [clothesQuery, electronicsQuery, furnitureQuery, sellersQuery, infiniteQuery]);
+  }, [forYouQuery, yourLikesQuery, recentQuery, sellersQuery, infiniteQuery]);
 
   const isRefreshing =
-    (clothesQuery.isFetching && !clothesQuery.isLoading) ||
-    (electronicsQuery.isFetching && !electronicsQuery.isLoading) ||
-    (furnitureQuery.isFetching && !furnitureQuery.isLoading) ||
-    (sellersQuery.isFetching && !sellersQuery.isLoading) ||
+    (forYouQuery.isFetching && !forYouQuery.isLoading) ||
+    (yourLikesQuery.isFetching && !yourLikesQuery.isLoading) ||
+    (recentQuery.isFetching && !recentQuery.isLoading) ||
     (infiniteQuery.isFetching && !infiniteQuery.isFetchingNextPage);
 
-  // ✅ ListHeader: 3 Product Carousels + 1 Seller Carousel
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🐛 ROOT CAUSE BERANDA BUG #2: ListHeader deps pakai full query object
+  //
+  // useCallback([forYouQuery, yourLikesQuery, recentQuery, sellersQuery])
+  //
+  // TanStack Query mengembalikan OBJECT BARU setiap kali komponen re-render
+  // (object identity berubah meski data tidak berubah).
+  //
+  // Efek: deps berubah SETIAP RENDER → useCallback recreate ListHeader
+  // SETIAP RENDER → function reference baru → FlatList lihat type berbeda
+  // → UNMOUNT + REMOUNT header setiap render.
+  //
+  // Dengan 4 query aktif (forYou, yourLikes, recent, sellers), header
+  // di-remount berkali-kali bahkan saat user hanya scroll.
+  // Ini menyebabkan:
+  //   a) Semua carousel dalam ListHeader di-destroy + re-create setiap render
+  //   b) Semua gambar di carousel reload dari scratch setiap render
+  //   c) Scroll position dalam carousel reset ke 0 setiap render
+  //   d) FlatList layout calculation ulang setiap header mount baru
+  //   e) MASSIVE lag → scrolling berat, navigasi lambat
+  //
+  // ✅ FIX: Pakai ref pattern yang sama dengan ListFooter
+  //   Step 1: Extract hanya primitive/stable values yang dibutuhkan
+  //   Step 2: Simpan di headerRef yang diupdate synchronously setiap render
+  //   Step 3: ListHeader pakai useCallback([]) → EMPTY DEPS → stable selamanya
+  //   Step 4: FlatList TIDAK pernah remount header
+  // ─────────────────────────────────────────────────────────────────────────
+  const headerRef = React.useRef({
+    forYouProducts: [] as any[],
+    forYouLoading: true,
+    yourLikesProducts: [] as any[],
+    yourLikesLoading: true,
+    recentProducts: [] as any[],
+    recentLoading: true,
+    sellers: [] as any[],
+    sellersLoading: true,
+  });
+  // Update ref synchronously — TIDAK trigger re-render
+  headerRef.current.forYouProducts = forYouQuery.data?.products ?? [];
+  headerRef.current.forYouLoading = forYouQuery.isLoading;
+  headerRef.current.yourLikesProducts = yourLikesQuery.data?.products ?? [];
+  headerRef.current.yourLikesLoading = yourLikesQuery.isLoading;
+  headerRef.current.recentProducts = recentQuery.data?.products ?? [];
+  headerRef.current.recentLoading = recentQuery.isLoading;
+  headerRef.current.sellers = sellersQuery.data?.sellers ?? [];
+  headerRef.current.sellersLoading = sellersQuery.isLoading;
+
+  // extraData untuk header — berubah saat data query berubah
+  // → FlatList re-render → ListHeader dipanggil → baca ref terbaru
+  const headerExtraData = React.useMemo(
+    () => ({
+      fy: forYouQuery.dataUpdatedAt,
+      yl: yourLikesQuery.dataUpdatedAt,
+      r: recentQuery.dataUpdatedAt,
+      s: sellersQuery.dataUpdatedAt,
+    }),
+    [
+      forYouQuery.dataUpdatedAt,
+      yourLikesQuery.dataUpdatedAt,
+      recentQuery.dataUpdatedAt,
+      sellersQuery.dataUpdatedAt,
+    ]
+  );
+
+  // EMPTY DEPS → stable reference selamanya → FlatList TIDAK pernah remount
   const ListHeader = React.useCallback(() => {
+    const h = headerRef.current;
     return (
       <View className="gap-8">
-        {/* Carousel 1: Clothes */}
         <OnboardingCarousel
           deskription="Pelajari cara pakai Preloved!"
           title="Welcome Kak"
-          isLoading={clothesQuery.isLoading}
+          isLoading={h.forYouLoading}
         />
         <ProductCarousel
           title="For You"
-          products={clothesQuery.data?.products ?? []}
-          isLoading={clothesQuery.isLoading}
-          onProductPress={(product) => {
-            console.log('Product:', product.id);
-          }}
-          onSeeAllPress={() => {
-            router.push('/(tabs)/explore?category=1');
-          }}
+          products={h.forYouProducts}
+          isLoading={h.forYouLoading}
+          onSeeAllPress={() => router.push('/(tabs)/explore')}
         />
-
-        {/* Carousel 2: Electronics */}
         <ProductCarousel
           title="Your Likes"
-          products={electronicsQuery.data?.products ?? []}
-          isLoading={electronicsQuery.isLoading}
-          onProductPress={(product) => {
-            console.log('Product:', product.id);
-          }}
-          onSeeAllPress={() => {
-            router.push('/(tabs)/explore?category=2');
-          }}
+          products={h.yourLikesProducts}
+          isLoading={h.yourLikesLoading}
+          onSeeAllPress={() => router.push('/(tabs)/explore')}
         />
-
-        {/* Carousel 3: Furniture */}
         <ProductCarousel
           title="Baru Dilihat"
-          products={furnitureQuery.data?.products ?? []}
-          isLoading={furnitureQuery.isLoading}
-          onProductPress={(product) => {
-            console.log('Product:', product.id);
-          }}
-          onSeeAllPress={() => {
-            router.push('/(tabs)/explore?category=3');
-          }}
+          products={h.recentProducts}
+          isLoading={h.recentLoading}
+          onSeeAllPress={() => router.push('/(tabs)/explore')}
         />
-
-        {/* ✅ Carousel 4: Sellers with top products */}
         <SellerCarousel
           title="Rekomendasi seller"
-          sellers={sellersQuery.data?.sellers ?? []}
-          isLoading={sellersQuery.isLoading}
-          onSellerPress={(seller) => {
-            console.log('Seller:', seller.id);
-          }}
-          onSeeAllPress={() => {
-            router.push('/(tabs)/explore?tab=sellers');
-          }}
+          sellers={h.sellers}
+          isLoading={h.sellersLoading}
+          onSellerPress={(seller) => console.log('Seller:', seller.id)}
+          onSeeAllPress={() => router.push('/(tabs)/explore?tab=sellers')}
         />
-
-        {/* Section 5 Header */}
         <View className="px-5">
           <HeaderAction title="Hot Items" onPress={() => router.push('/(tabs)/explore')} />
         </View>
       </View>
     );
-  }, [clothesQuery, electronicsQuery, furnitureQuery, sellersQuery]);
+  }, []); // ← EMPTY DEPS
 
-  // ✅ ListFooter
+  // EMPTY DEPS → stable reference selamanya
   const ListFooter = React.useCallback(() => {
-    if (infiniteQuery.isFetchingNextPage) {
+    const { isFetchingNextPage, hasNextPage, count } = footerRef.current;
+    if (isFetchingNextPage) {
       return (
-        <View className="items-center py-2" style={{ height: 40 }}>
+        <View className="items-center py-4" style={{ height: 56 }}>
           <Spinner className="text-primary" />
-          <Text className="sr-only mt-3 text-sm text-muted-foreground">Loading more...</Text>
         </View>
       );
     }
-
-    if (!infiniteQuery.hasNextPage && infiniteProducts.length > 0) {
+    if (hasNextPage === false && count > 0) {
       return (
-        <View className="sr-only items-center py-8">
-          <Text className="text-sm text-muted-foreground">
-            All {infiniteProducts.length} products loaded
-          </Text>
+        <View className="items-center py-8">
+          <Text className="text-sm text-muted-foreground">Semua {count} produk telah dimuat</Text>
         </View>
       );
     }
-
     return <View style={{ height: 20 }} />;
-  }, [infiniteQuery.isFetchingNextPage, infiniteQuery.hasNextPage, infiniteProducts.length]);
+  }, []); // ← EMPTY DEPS
 
-  // ✅ Render item
-  const renderItem = React.useCallback(({ item, index }: { item: Product; index: number }) => {
-    return (
+  const renderItem = React.useCallback(
+    ({ item, index }: { item: Product; index: number }) => (
       <View className="relative mb-4 aspect-auto w-1/2 flex-grow">
         <ProductCard index={index} Product={item} widht={2.25} />
       </View>
-    );
-  }, []);
+    ),
+    []
+  );
 
-  // Initial loading
+  // Combined extraData: signal FlatList untuk re-render saat header atau footer berubah
+  const combinedExtraData = React.useMemo(
+    () => ({ ...headerExtraData, ...footerExtraData }),
+    [headerExtraData, footerExtraData]
+  );
+
   if (infiniteQuery.isLoading) {
     return (
       <FlatList
@@ -197,29 +258,21 @@ export default function HomeScreen() {
           paddingHorizontal: 12,
           alignItems: 'center',
         }}
-        ListHeaderComponent={<ListHeader />}
-        contentContainerStyle={{
-          paddingTop: 30,
-          gap: 9,
-          paddingBottom: 5, // ✅ Reduced padding
-        }}
+        ListHeaderComponent={ListHeader}
+        contentContainerStyle={{ paddingTop: 30, gap: 9, paddingBottom: 5 }}
         scrollEnabled={true}
       />
     );
   }
 
-  // Error state
   if (infiniteQuery.isError) {
     return (
       <View className="flex-1 items-center justify-center p-5">
         <Text className="mb-2 text-center text-lg font-semibold text-destructive">
-          Failed to load products
-        </Text>
-        <Text className="mb-6 text-center text-sm text-muted-foreground">
-          {infiniteQuery.error?.message}
+          Gagal memuat produk
         </Text>
         <Button onPress={() => infiniteQuery.refetch()}>
-          <Text>Try Again</Text>
+          <Text>Coba Lagi</Text>
         </Button>
       </View>
     );
@@ -237,23 +290,23 @@ export default function HomeScreen() {
         paddingHorizontal: 12,
         alignItems: 'center',
       }}
-      ListHeaderComponent={<ListHeader />}
-      ListFooterComponent={<ListFooter />}
-      // ✅ CRITICAL FIXES
+      ListHeaderComponent={ListHeader}
+      ListFooterComponent={ListFooter}
+      extraData={combinedExtraData}
       onEndReached={handleLoadMore}
-      onEndReachedThreshold={0.8} // ✅ Triggers EARLY!
+      onEndReachedThreshold={1.5}
+      // ✅ Sama dengan explore-products: cover kasus re-check setelah data datang
+      onMomentumScrollEnd={handleLoadMore}
+      onScrollEndDrag={handleLoadMore}
       refreshControl={
         <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={tintColor} />
       }
-      contentContainerStyle={{
-        paddingTop: 30,
-        gap: 9,
-        paddingBottom: 5, // ✅ Reduced padding
-      }}
-      removeClippedSubviews={true}
+      contentContainerStyle={{ paddingTop: 30, gap: 9, paddingBottom: 5 }}
+      // ✅ Android removeClippedSubviews bug → hanya aktifkan di iOS
+      removeClippedSubviews={Platform.OS === 'ios'}
       maxToRenderPerBatch={10}
-      windowSize={5}
-      initialNumToRender={10}
+      windowSize={7}
+      initialNumToRender={6}
       showsVerticalScrollIndicator={false}
     />
   );

@@ -20,6 +20,22 @@ import {
   SlidersHorizontal,
   Wallet,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/fragments/shadcn-ui/card';
+import { ImageBackground } from 'expo-image';
+
+import { useColorScheme } from 'nativewind';
+import { Switch } from '../../fragments/shadcn-ui/switch';
+import MenuCard from '../../fragments/custom/card/menu-card';
+import { MenuDetail } from '@/type';
+
 export default function ProfileBlock() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
 
@@ -79,12 +95,12 @@ export default function ProfileBlock() {
 
   return (
     <Wrapper
-      edges={['bottom']}
-      className="gap-5 px-4 py-2"
+      edges={[]}
+      className="gap-5 px-4 py-2 pb-10"
       containerClassName="  bg-secondary  dark:bg-muted-foreground/5">
       <Link
         href="/(tabs)/profile"
-        className={cn('group rounded-2xl border-0 bg-card p-4 active:bg-card/65')}>
+        className={cn('group rounded-xl border-0 bg-card p-4 active:bg-card/65')}>
         <View className="w-full flex-row items-center justify-between group-active:opacity-65">
           <View className="flex-row items-center gap-3">
             <Avatar
@@ -117,19 +133,6 @@ export default function ProfileBlock() {
     </Wrapper>
   );
 }
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/fragments/shadcn-ui/card';
-import { ImageBackground } from 'expo-image';
-import { MenuDetail } from './detail-product';
-import { useColorScheme } from 'nativewind';
-import { Switch } from '../../fragments/shadcn-ui/switch';
 
 function AdsCard() {
   const screenWidth = Dimensions.get('window').width;
@@ -138,7 +141,7 @@ function AdsCard() {
   return (
     <Card
       className={cn(
-        'm-auto h-fit w-full content-start items-start justify-start overflow-hidden rounded-2xl border-0 bg-background p-0 shadow-none active:scale-95 active:opacity-70'
+        'm-auto h-fit w-full content-start items-start justify-start overflow-hidden rounded-xl border-0 bg-background p-0 shadow-none active:scale-95 active:opacity-70'
       )}>
       <CardContent className="w-full overflow-hidden p-0">
         <ImageBackground
@@ -188,53 +191,6 @@ function AdsCard() {
             </CardAction> */}
           </View>
         </ImageBackground>
-      </CardContent>
-      {/* ✅ Top 3 Product Images Grid */}
-    </Card>
-  );
-}
-
-type componentProps = {
-  MenuList: MenuDetail[];
-};
-
-function MenuCard({ MenuList }: componentProps) {
-  return (
-    <Card
-      className={cn(
-        'm-auto h-fit w-full content-start items-start justify-start overflow-hidden rounded-2xl border-0 p-0 shadow-none'
-      )}>
-      <CardContent className="w-full overflow-hidden p-0">
-        {MenuList.map((detail, i) => (
-          <Button
-            key={i}
-            variant={'outline'}
-            onPress={detail.onPress}
-            className={cn(
-              'h-fit w-full justify-between rounded-none border-l-0 border-r-0 bg-background p-4 active:bg-accent dark:bg-background dark:active:bg-input/50',
-              i === 0 && 'border-t-0',
-              i != MenuList.length - 1 ? 'border-b-0' : 'border-b-0'
-            )}>
-            <View className="flex-row items-center gap-3">
-              {detail.icon && (
-                <Icon as={detail.icon} size={24} className="text-muted-foreground/80" />
-              )}
-              <Text variant={'h3'} className="text-base font-semibold">
-                {detail.Label}
-              </Text>
-            </View>
-            {detail.rigthComponent ? (
-              detail.rigthComponent
-            ) : (
-              <View className="flex-row items-center gap-1">
-                <Text variant={'p'} className="m-0 p-0">
-                  {detail.Value}
-                </Text>
-                <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
-              </View>
-            )}
-          </Button>
-        ))}
       </CardContent>
       {/* ✅ Top 3 Product Images Grid */}
     </Card>

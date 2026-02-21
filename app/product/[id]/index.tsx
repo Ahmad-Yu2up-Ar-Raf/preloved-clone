@@ -136,7 +136,7 @@ export default function ProductDetail() {
   const productId = Number(id);
   const { data: product, isLoading, isError, error } = useQuery(productByIdQueryOptions(productId));
   const SCREEN_OPTIONS = {
-    headerTrasnparent: true,
+    headerTransparent: true,
     header: () => (
       <Animated.View
         style={[
@@ -160,7 +160,7 @@ export default function ProductDetail() {
           onPress={() => router.back()}
           size="icon"
           variant="ghost"
-          className="size-10 rounded-full">
+          className="size-10 rounded-full active:bg-accent/50">
           {/*
            * ✅ AnimatedDualIcon: 2 icon ditumpuk, animate opacity berlawanan
            * - Putih fade out seiring scroll
@@ -171,28 +171,32 @@ export default function ProductDetail() {
           {currentTheme === 'light' ? (
             <AnimatedDualIcon
               IconComponent={ChevronLeft}
-              size={26}
+              size={30}
               scrollY={scrollY}
               fadeStart={FADE_START}
               fadeEnd={FADE_END}
             />
           ) : (
-            <Icon as={ChevronLeft} size={26} color="#ffffff" />
+            <Icon as={ChevronLeft} size={30} color="#ffffff" />
           )}
         </Button>
 
         {/* Wishlist Button */}
-        <Button size="icon" variant="ghost" className="size-10 rounded-full">
+        <Button
+          onPressIn={() => router.push('/keranjang')}
+          size="icon"
+          variant="ghost"
+          className="size-10 rounded-full active:bg-accent/50">
           {currentTheme === 'light' ? (
             <AnimatedDualIcon
               IconComponent={ShoppingBag}
-              size={22}
+              size={27}
               scrollY={scrollY}
               fadeStart={FADE_START}
               fadeEnd={FADE_END}
             />
           ) : (
-            <Icon as={ShoppingBag} size={22} color="#ffffff" />
+            <Icon as={ShoppingBag} size={27} color="#ffffff" />
           )}
         </Button>
       </Animated.View>
@@ -251,18 +255,18 @@ export default function ProductDetail() {
               right: 0,
               paddingBottom: insets.bottom > 0 ? insets.bottom + 7 : 12,
               paddingTop: 12,
-              paddingHorizontal: 16,
+              paddingHorizontal: 15,
               backgroundColor: bgColor,
               borderTopWidth: 0.5,
               borderTopColor: THEME[currentTheme].border,
               flexDirection: 'row',
-              gap: 15,
+              gap: 9,
               zIndex: 100,
             }}>
-            <Button variant="outline" className="flex-1 rounded-2xl">
+            <Button variant="outline" className="flex-1 rounded-xl">
               <Text className="font-Termina_Bold text-sm text-primary">Nego</Text>
             </Button>
-            <Button variant="default" className="flex-1 rounded-2xl">
+            <Button variant="default" className="flex-1 rounded-xl">
               <Text className="font-Termina_Bold text-sm text-primary-foreground">Beli</Text>
             </Button>
           </View>
